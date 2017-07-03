@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<script src="./hammer.min.js"></script>
+</head>
+<body>
+<svg id="graph" width="100%" height="800" style="background-color: rgb(204, 204, 204);">
+</svg>
+<script>
+function HorizontalAxis() {
+  var self = this;
+}
+function VerticalAxis() {
+  var self = this;
+}
+function Point(x, y) {
+  this.x = x;
+  this.y = y;
+}
+function Polyline(points) {
+  var self = this;
+  self.points = points;
+  var pointsString = "";
+  self.points.forEach(function(point) {
+    pointsString += (" " + point.x + "," + point.y);
+  });
+  if (pointsString.length != 0) {
+    pointsString = pointsString.substring(1);
+  }
+  var polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  polyline.setAttribute('points', pointsString);
+  polyline.setAttribute('style', "fill:none;stroke:black;");
+  self.node = polyline;
+}
+function Rect(x, y, color) {
+  var self = this;
+  self.x = x;
+  self.y = y;
+  self.translate = 0;
+  self.startPinchTranslate = 0;
+  self.startPinchDistance = 0;
+  self.startPanTranslate = 0;
+  var element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  element.setAttribute('x', self.x);
+  element.setAttribute('y', self.y);
+  element.setAttribute('width', 10);
+  element.setAttribute('height', 90);
+  element.setAttribute('style', "fill:" + color);
+  element.setAttribute('transform', "translate("+self.translate+",0)");
+  self.node = element;
+  self.onPinchStart = function(event) {
+    self.startPinchTranslate = self.translate;
+    self.startPinchDistance = self.x + self.translate - event.center.x;
+  }
+  self.onPinch = function(event) {
+    self.translate = self.startPinchTranslate + self.startPinchDistance * (event.scale - 1);
+    self.node.setAttribute('transform', "translate("+self.translate+",0)");
+  }
+  self.onPinchEnd = function(event) {
+    self.startPanTranslate = self.translate;
+  }
+  self.onPanStart = function(event) {
+    self.startPanTranslate = self.translate;
+  }
+  self.onPan = function(event) {
+    self.translate = self.startPanTranslate + event.deltaX;
+    self.node.setAttribute('transform', "translate("+self.translate+",0)");
+  }
+  self.onPanEnd = function(event) {
+  }
+}
+function GraphController(svg) {
+  var self = this;
+  self.rootSvg = svg;
+  self.scale = 1;
+  self.scalePinchEnd = 1;
+  self.rectsArray = new Array();
+  self.polyline = null;
+  self.generateData = function() {
+    // rects
+    self.rectsArray = [];
+    self.rootSvg.innerHTML = "";
+    for (var i = 0; i < 30; i++) {
+      self.rectsArray.push(new Rect(self.getRandomNumber(), 10, self.getRandomColor()));
+    }
+    self.rectsArray.forEach(function(rect) {
+      self.rootSvg.appendChild(rect.node);
+    });
+
+    // polyline
+    var polylinePoints = [];
+    polylinePoints.push(new Point(5,20));
+    polylinePoints.push(new Point(15,10));
+    polylinePoints.push(new Point(25,35));
+    polylinePoints.push(new Point(39,21));
+    polylinePoints.push(new Point(47,40));
+    self.polyline = new Polyline(polylinePoints);
+    self.rootSvg.appendChild(self.polyline.node);
+  }
+  self.onPanStart = function(ev) {
+    self.rectsArray.forEach(function(rect) {
+      rect.onPanStart(ev);
+    });
+  }
+  self.onPanEnd = function(ev) {
+    self.rectsArray.forEach(function(rect) {
+      rect.onPanEnd(ev);
+    });
+  }
+  self.onPan = function(ev) {
+    self.rectsArray.forEach(function(rect) {
+      rect.onPan(ev);
+    });
+  }
+  self.onPinchStart = function(ev) {
+    self.rectsArray.forEach(function(rect) {
+      rect.onPinchStart(ev);
+    });
+  }
+  self.onPinchEnd = function(ev) {
+    self.rectsArray.forEach(function(rect) {
+      rect.onPinchEnd(ev);
+    });
+  }
+  self.onPinch = function(ev) {
+    self.rectsArray.forEach(function(rect) {
+      rect.onPinch(ev);
+    });
+  }
+  self.getRandomColor = function() {
+    var letters = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+  self.getRandomNumber = function() {
+    return Math.floor(Math.random() * 1000);
+  }
+}
+
+// event listener
+var graph = document.getElementById('graph');
+var mc = new Hammer(graph);
+mc.get('pinch').set({ enable: true });
+
+var graphController = new GraphController(graph);
+graphController.generateData();
+
+mc.on('panstart', function(ev) {
+  graphController.onPanStart(ev);
+});
+mc.on('panend', function(ev) {
+  graphController.onPanEnd(ev);
+});
+mc.on("panleft panright", function(ev) {
+  graphController.onPan(ev);
+});
+mc.on('pinchstart', function(ev) {
+  graphController.onPinchStart(ev);
+});
+mc.on('pinchend', function(ev) {
+  graphController.onPinchEnd(ev);
+});
+mc.on('pinchin pinchout', function(ev) {
+  graphController.onPinch(ev);
+});
+
+
+</script>
+
+
+
+</body></html>
